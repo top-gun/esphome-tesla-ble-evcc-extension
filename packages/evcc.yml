@@ -1,3 +1,38 @@
+# The switch will not send commands to the car if the charing state is "complete", this way we make sure the Tesla will not wake up for chatty OBC commands.
+
+switch:
+  - platform: template
+    name: "Charger EVCC"
+    id: charger_evcc
+    optimistic: True                    # Wichtig: Eigenen Status beibehalten
+
+    # Beim Einschalten nur weiterleiten, wenn Ladevorgang nicht abgeschlossen ist
+    turn_on_action:
+      - if:
+          condition:
+            - lambda: |-
+                return id(charging_state).state != "Complete";
+          then:
+            - switch.turn_on: sw_charger
+            - logger.log: "charger_evcc → charger eingeschaltet"
+          else:
+            - logger.log: "charger_evcc: Einschalten verweigert (charge_state = complete)"
+
+    # Beim Ausschalten immer weiterleiten
+    turn_off_action:
+      - if:
+          condition:
+            - lambda: |-
+                return id(charging_state).state != "Complete";
+          then:
+            - switch.turn_off: sw_charger
+            - logger.log: "charger_evcc → charger ausgeschaltet"
+          else:
+            - logger.log: "charger_evcc: Ausschalten verweigert (charge_state = complete)"
+
+
+# The number will not send commands to the car if the charing state is "complete", this way we make sure the Tesla will not wake up for chatty OBC commands.
+
 number:
   - platform: template
     name: "Charging Amps EVCC"
@@ -29,6 +64,11 @@ number:
                 format: "charging_amps_evcc: %.1f A blockiert (charging_state = %s)"
                 args: ['x', 'id(charging_state).state.c_str()']
                 level: WARN
+
+# charing state ISO will report the charing state in an ISO compliant way, mimicking a wall charger:
+# A: Vehicle not connected
+# B: Vehicle connected, but did not request charge
+# C: Vehicle connected and requested power
 
 text_sensor:
   - platform: template
