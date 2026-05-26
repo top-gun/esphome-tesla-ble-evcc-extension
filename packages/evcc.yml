@@ -68,7 +68,7 @@ number:
 # charing state ISO will report the charing state in an ISO compliant way, mimicking a wall charger:
 # A: Vehicle not connected
 # B: Vehicle connected, but did not request charge
-# C: Vehicle connected and requested power
+# C: Vehicle connected and requests power
 
 text_sensor:
   - platform: template
