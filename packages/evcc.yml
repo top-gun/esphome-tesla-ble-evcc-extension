@@ -38,17 +38,32 @@ text_sensor:
     lambda: |-
       static const std::map<std::string, std::string> mapping = {
         {"Disconnected", "A"},
-        {"Stopped",  "B"},
-        {"Complete", "B"},
-        {"Charging", "C"},
-        {"Starting", "C"}
+        {"Stopped",      "B"},
+        {"Complete",     "B"},
+        {"Charging",     "C"},
+        {"Starting",     "C"}
       };
 
-      auto it = mapping.find(id(charging_state).state);
-      if (it != mapping.end()) {
-        return {it->second};
-      } else {
-        return {"A"};          // Fallback für unbekannte Werte
-      }
-    update_interval: 5s
+      const std::string& current_raw = id(charging_state).state;
+      auto it = mapping.find(current_raw);
 
+      std::string current;
+      if (it != mapping.end()) {
+        current = it->second;
+      } else {
+        current = "A";                    // Fail-Safe
+      }
+
+      // === Zustandswechsel-Erkennung ===
+      static std::string previous = "";   // Merkt sich den letzten Zustand
+
+      if (current == "A" && previous != "A" && previous != "") {
+        // Wechsel zu A erfolgt → Switch ausschalten
+        id(charger_evcc).turn_off();
+        ESP_LOGI("charging_iso", "Zustandswechsel zu A erkannt → charger_evcc ausgeschaltet");
+      }
+
+      previous = current;   // Aktuellen Zustand für nächsten Durchlauf speichern
+
+      return {current};
+    update_interval: 5s
