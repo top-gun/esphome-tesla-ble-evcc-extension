@@ -1,0 +1,54 @@
+number:
+  - platform: template
+    name: "Charging Amps EVCC"
+    id: charging_amps_evcc
+    icon: "mdi:current-ac"
+    unit_of_measurement: "A"
+    optimistic: true
+    min_value: 0
+    max_value: $charging_amps_max
+    step: 1.0
+
+    set_action:
+      - if:
+          condition:
+            - lambda: |-
+                return id(charging_state).state != "Complete";
+          then:
+            - number.set:
+                id: charging_amps
+                value: !lambda 'return x;'
+            - logger.log:
+                format: "charging_amps_evcc → %.1f A weitergeleitet"
+                args: ['x']
+          else:
+#            - number.set:
+#                id: charging_amps_evcc
+#                value: !lambda 'return id(charging_amps_evcc).state;'   # zurücksetzen
+            - logger.log:
+                format: "charging_amps_evcc: %.1f A blockiert (charging_state = %s)"
+                args: ['x', 'id(charging_state).state.c_str()']
+                level: WARN
+
+text_sensor:
+  - platform: template
+    name: "Charging State ISO"
+    id: charging_state_iso
+    icon: "mdi:ev-station"
+    lambda: |-
+      static const std::map<std::string, std::string> mapping = {
+        {"Disconnected", "A"},
+        {"Stopped",  "B"},
+        {"Complete", "B"},
+        {"Charging", "C"},
+        {"Starting", "C"}
+      };
+
+      auto it = mapping.find(id(charging_state).state);
+      if (it != mapping.end()) {
+        return {it->second};
+      } else {
+        return {"A"};          // Fallback für unbekannte Werte
+      }
+    update_interval: 5s
+
