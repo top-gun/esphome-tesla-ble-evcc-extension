@@ -57,7 +57,7 @@ number:
 
                 // Bei Werten < 5 zusätzlich ein zweites Mal setzen
                 if (value < 5.0) {
-                  delay(1000);  // kurze Pause, damit der erste Befehl verarbeitet wird
+                  delay(3000);  // kurze Pause, damit der erste Befehl verarbeitet wird
                   id(charging_amps).make_call().set_value(value).perform();
                   ESP_LOGI("charging_amps", "Wert %.1f A (kleiner 5) zweimal gesendet", value);
                 } else {
