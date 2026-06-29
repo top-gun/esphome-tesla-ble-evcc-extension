@@ -96,15 +96,15 @@ text_sensor:
       }
 
       // === Zustandswechsel-Erkennung ===
-      static std::string previous = "";   // Merkt sich den letzten Zustand
+      static std::string previous = "";   // store last state
 
       if (current == "A" && previous != "A" && previous != "") {
         // Wechsel zu A erfolgt → Switch ausschalten
         id(charger_evcc).turn_off();
-        ESP_LOGI("charging_iso", "Zustandswechsel zu A erkannt → charger_evcc ausgeschaltet");
+        ESP_LOGI("charging_iso", "ISO-state change to A (disconnected/absent) detected → turned off charger_evcc");
       }
 
-      previous = current;   // Aktuellen Zustand für nächsten Durchlauf speichern
+      previous = current;   // Save current state for next iteration
 
       return {current};
     update_interval: 5s
@@ -116,14 +116,14 @@ script:
       - lambda: |-
           float value = id(pending_charge_current);
           id(charging_amps).make_call().set_value(value).perform();
-          ESP_LOGI("charging_amps", "Erster Setz-Befehl: %.1f A", value);
+          ESP_LOGI("charging_amps", "sending first set_current command: %.1f A", value);
 
       - delay: 3s
 
       - lambda: |-
           float value = id(pending_charge_current);
           id(charging_amps).make_call().set_value(value).perform();
-          ESP_LOGD("charging_amps", "Zweiter Setz-Befehl (<5A): %.1f A", value);
+          ESP_LOGD("charging_amps", "sending second set_current command (<5A): %.1f A", value);
 
 globals:
   - id: pending_charge_current
