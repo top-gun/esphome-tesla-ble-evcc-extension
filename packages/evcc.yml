@@ -58,7 +58,7 @@ number:
                   id(set_charge_current_evcc).execute();
                 } else {
                   id(charging_amps).make_call().set_value(value).perform();
-                  ESP_LOGI("charging_amps", "charging_amps_evcc → %.1f A weitergeleitet", value);
+                  ESP_LOGD("charging_amps", "sent charging_amps_evcc → %.1f A", value);
                 }
           else:
             - logger.log:
@@ -101,7 +101,7 @@ text_sensor:
       if (current == "A" && previous != "A" && previous != "") {
         // Wechsel zu A erfolgt → Switch ausschalten
         id(charger_evcc).turn_off();
-        ESP_LOGI("charging_iso", "ISO-state change to A (disconnected/absent) detected → turned off charger_evcc");
+        ESP_LOGD("charging_iso", "ISO-state change to A (disconnected/absent) detected → turned off charger_evcc");
       }
 
       previous = current;   // Save current state for next iteration
@@ -116,7 +116,7 @@ script:
       - lambda: |-
           float value = id(pending_charge_current);
           id(charging_amps).make_call().set_value(value).perform();
-          ESP_LOGI("charging_amps", "sending first set_current command: %.1f A", value);
+          ESP_LOGD("charging_amps", "sending first set_current command: %.1f A", value);
 
       - delay: 3s
 
