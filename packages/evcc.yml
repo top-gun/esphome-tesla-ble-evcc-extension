@@ -51,23 +51,24 @@ number:
           then:
             - lambda: |-
                 float value = x;
+                id(charging_amps_evcc).publish_state(value);  # Optimistic Update
 
-                // Wert einmal setzen
-                id(charging_amps).make_call().set_value(value).perform();
-
-                // Bei Werten < 5 zusätzlich ein zweites Mal setzen
-                if (value < 5.0) {
-                  delay(100);  // kurze Pause, damit der erste Befehl verarbeitet wird
-                  id(charging_amps).make_call().set_value(value).perform();
-                  ESP_LOGI("charging_amps", "Wert %.1f A (kleiner 5) zweimal gesendet", value);
-                } else {
-                  ESP_LOGI("charging_amps", "charging_amps_evcc → %.1f A weitergeleitet", value);
-                }
+            - if:
+                condition:
+                  lambda: 'return x < 5.0;'
+                then:
+                  - script.execute: set_charge_current_evcc
+                  - logger.log:
+                      format: "charging_amps_evcc → %.1f A (zweimal mit Delay)"
+                      args: [x]
+                else:
+                  - lambda: |-
+                      id(charging_amps).make_call().set_value(x).perform();
+                  - logger.log:
+                      format: "charging_amps_evcc → %.1f A"
+                      args: [x]
           else:
-            - logger.log:
-                format: "charging_amps_evcc: %.1f A blockiert (charging_state = %s)"
-                args: ['x', id(charging_state).state.c_str()]
-                level: WARN
+            - logger.log: "charging_amps_evcc: Befehl blockiert (Complete)"
 
 
 # charging state ISO will report the charing state in an ISO compliant way, mimicking a wall charger:
@@ -112,3 +113,19 @@ text_sensor:
 
       return {current};
     update_interval: 5s
+
+script:
+  - id: set_charge_current_evcc
+    mode: restart  # oder queued/single, je nach Bedarf
+    then:
+      - lambda: |-
+          float value = id(charging_amps_evcc).state;  # oder den übergebenen Wert weiterreichen
+          id(charging_amps).make_call().set_value(value).perform();
+          ESP_LOGI("charging", "Erster Setz-Befehl: %.1f A", value);
+
+      - delay: 3s   # hier ist delay erlaubt und sicher
+
+      - lambda: |-
+          float value = id(charging_amps_evcc).state;
+          id(charging_amps).make_call().set_value(value).perform();
+          ESP_LOGI("charging", "Zweiter Setz-Befehl (für <5A): %.1f A", value);
