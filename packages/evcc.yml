@@ -1,5 +1,17 @@
 # The switch will not send commands to the car if the charing state is "complete", this way we make sure the Tesla will not wake up for chatty OBC commands.
 
+# Topology flags. Defaults match the behaviour this package was designed for:
+# evcc controls the CAR directly (dumb wallbox, e.g. TWC3).
+# When evcc controls a smart wallbox instead (PWM current control) and the car
+# is only a data source, set stop_charge_on_unplug to "false" - otherwise the
+# stop sent on unplug is never undone by evcc and the car stays "Stopped" on
+# the next plug-in. start_charge_on_plugin additionally re-enables the charger
+# switch when a cable is plugged in (ISO state A -> B), mirroring the car's
+# native resume behaviour.
+substitutions:
+  stop_charge_on_unplug: "true"
+  start_charge_on_plugin: "false"
+
 switch:
   - platform: template
     name: "Charger EVCC"
@@ -98,10 +110,16 @@ text_sensor:
       // === Zustandswechsel-Erkennung ===
       static std::string previous = "";   // store last state
 
-      if (current == "A" && previous != "A" && previous != "") {
+      if (${stop_charge_on_unplug} && current == "A" && previous != "A" && previous != "") {
         // Wechsel zu A erfolgt → Switch ausschalten
         id(charger_evcc).turn_off();
         ESP_LOGD("charging_iso", "ISO-state change to A (disconnected/absent) detected → turned off charger_evcc");
+      }
+
+      if (${start_charge_on_plugin} && current == "B" && previous == "A") {
+        // Kabel frisch eingesteckt → Ladefreigabe wiederherstellen
+        id(charger_evcc).turn_on();
+        ESP_LOGD("charging_iso", "ISO-state change A -> B (plugged in) detected → turned on charger_evcc");
       }
 
       previous = current;   // Save current state for next iteration
